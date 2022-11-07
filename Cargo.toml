@@ -1,0 +1,15 @@
+[package]
+name = "announce"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+hyper = { version = "0.14.20", features = ["http2", "client"] }
+hyper-tls = "0.5.0"
+thiserror = "1.0.37"
+tokio = "1.21.2"
+pretty_env_logger = "0.4.0"
+http = "0.2.8"
+regex = "1.6.0"
