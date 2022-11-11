@@ -4,12 +4,10 @@ mod rocketchat;
 
 #[derive(Error, Debug)]
 pub enum ServiceError {
-    #[error("hyper error: {0}")]
-    HyperError(#[from] hyper::Error),
+    #[error("reqwest error: {0}")]
+    Reqwest(#[from] reqwest::Error),
     #[error("Rocket.Chat error: {0}")]
     RocketChat(#[from] rocketchat::Error),
-    #[error("Faulty uri given")]
-    ParseError(#[from] http::uri::InvalidUri),
     #[error("Schema does not match a supported service (create an issue for a new service)")]
     NoMatchingSchema,
 }
@@ -17,28 +15,25 @@ pub enum ServiceError {
 pub trait Service<Error> {
     fn schema() -> Vec<&'static str>;
     fn request(
+        client: &reqwest::Client,
         target: &str,
         msg: &super::Message,
-    ) -> Result<(hyper::Request<hyper::Body>, bool), Error>;
+    ) -> Result<reqwest::Request, Error>;
     fn match_schema(target: &str) -> bool {
         Self::schema().iter().any(|s| target.starts_with(s))
-    }
-    fn create_builder() -> http::request::Builder {
-        hyper::Request::builder().header(
-            "user-agent",
-            format!("announce/{}", env!("CARGO_PKG_VERSION")),
-        )
     }
 }
 
 pub fn decide_service(
+    client: &reqwest::Client,
     target: &str,
     msg: &super::Message,
-) -> Result<(http::Request<hyper::Body>, bool), ServiceError> {
+) -> Result<reqwest::Request, ServiceError> {
     //cascade of services
     if rocketchat::RocketChat::match_schema(target) {
-        return Ok(rocketchat::RocketChat::request(target, msg)?);
+        return Ok(rocketchat::RocketChat::request(client, target, msg)?);
     }
+    //TODO discord
 
     Err(ServiceError::NoMatchingSchema)
 }

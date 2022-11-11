@@ -1,14 +1,39 @@
-use hyper::{Body, Method};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+#[derive(Serialize, Deserialize, Debug)]
+struct Message {
+    channel: String,
+    text: String,
+}
+
+impl Message {
+    fn new(channel: &str) -> Self {
+        Self {
+            channel: format!("#{}", channel),
+            text: String::new(),
+        }
+    }
+
+    fn populate(&mut self, msg: &crate::Message) {
+        use crate::Message;
+        match msg {
+            Message::Text(s) => self.text = s.clone(),
+        }
+    }
+}
+
+//reference: https://developer.rocket.chat/reference/api/rest-api/endpoints/core-endpoints/chat-endpoints/postmessage
 pub struct RocketChat {}
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Request error: {0}")]
-    Request(#[from] http::Error),
-    #[error("target does not match Regex")]
-    RegexMatch,
+    #[error("Reqwest error: {0}")]
+    Reqwest(#[from] reqwest::Error),
+    #[error("uri parse error: {0}")]
+    Parse(#[from] url::ParseError),
+    #[error("url error: {0}")]
+    Url(String),
 }
 
 impl super::Service<Error> for RocketChat {
@@ -20,72 +45,52 @@ impl super::Service<Error> for RocketChat {
     /// rocketchat://USER:TOKEN@HOSTNAME/CHANNEL
     /// rocketchats://USER:TOKEN@HOSTNAME/CHANNEL
     fn request(
+        client: &reqwest::Client,
         target: &str,
         msg: &crate::Message,
-    ) -> Result<(http::Request<hyper::Body>, bool), Error> {
-        let (https, user, token, host, port, channel) = Self::extract(target)?;
+    ) -> Result<reqwest::Request, Error> {
+        //extract information from target
+        let url = url::Url::parse(target).unwrap();
+        let https = url.scheme() == "rocketchats";
+        let user = url.username();
+        let token = url
+            .password()
+            .ok_or_else(|| Error::Url(String::from("no password given")))?;
+        let host = url.host_str().unwrap();
+        let port = url.port();
+        let channel = url
+            .path_segments()
+            .ok_or_else(|| Error::Url(String::from("no channel given")))?
+            .next()
+            .ok_or_else(|| Error::Url(String::from("no channel given")))?;
 
-        let uri = match (https, port) {
-            (true, Some(port)) => format!("https://{}:{}/api/v1/chat.PostMessage", host, port),
-            (true, None) => format!("https://{}/api/v1/chat.PostMessage", host),
-            (false, Some(port)) => format!("http://{}:{}/api/v1/chat.PostMessage", host, port),
-            (false, None) => format!("http://{}/api/v1/chat.PostMessage", host),
+        //build url
+        let url = match (https, port) {
+            (true, None) => format!("https://{}/api/v1/chat.postMessage", host),
+            (false, None) => format!("http://{}/api/v1/chat.postMessage", host),
+            (true, Some(p)) => format!("https://{}:{}/api/v1/chat.postMessage", host, p),
+            (false, Some(p)) => format!("http://{}:{}/api/v1/chat.postMessage", host, p),
         };
+        let url = reqwest::Url::parse(&url)?;
 
-        use crate::Message;
-        let msg = match msg {
-            Message::Text(msg) => {
-                format!("{{ \"channel\": \"#{}\", \"text\": \"{}\" }}", channel, msg)
-            }
-        };
+        //build body from msg
+        let mut body = Message::new(channel);
+        body.populate(msg);
 
-        let req = Self::create_builder()
-            .method(Method::POST)
-            .uri(uri)
+        //build request
+        let builder = client.request(reqwest::Method::POST, url);
+        let req = builder
             .header("x-auth-token", token)
             .header("x-user-id", user)
-            .header("content-type", "application/json")
-            .body(Body::from(msg))?;
+            .header("content-type", "applicatioin/json")
+            .json(&body)
+            .build()?;
 
-        Ok((req, https))
-    }
-}
-
-impl RocketChat {
-    fn extract(target: &str) -> Result<(bool, &str, &str, &str, Option<i32>, &str), Error> {
-        let re = regex::Regex::new(
-            r"rocketchat(?P<https>[s]?)://(?P<user>[a-zA-Z]*):(?P<token>[a-zA-Z]*)@(?P<hostname>[a-zA-Z]*)(:(?P<port>[0-9]*))?/(?P<channel>[a-zA-Z]*)",
-        )
-        .unwrap();
-        let cap = re.captures(target).ok_or(Error::RegexMatch)?;
-
-        Ok((
-            cap.name("https").unwrap().as_str() == "s",
-            cap.name("user").unwrap().as_str(),
-            cap.name("token").unwrap().as_str(),
-            cap.name("hostname").unwrap().as_str(),
-            cap.name("port")
-                .map(|port| port.as_str().parse::<i32>().unwrap()),
-            cap.name("channel").unwrap().as_str(),
-        ))
+        Ok(req)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn test_extract() {
-        assert_eq!(
-            (false, "user", "token", "host", None, "channel"),
-            super::RocketChat::extract("rocketchat://user:token@host/channel").unwrap()
-        );
-        assert_eq!(
-            (true, "user", "token", "host", None, "channel"),
-            super::RocketChat::extract("rocketchats://user:token@host/channel").unwrap()
-        );
-        assert_eq!(
-            (true, "user", "token", "host", Some(800), "channel"),
-            super::RocketChat::extract("rocketchats://user:token@host:800/channel").unwrap()
-        );
     }
 }
