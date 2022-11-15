@@ -65,10 +65,10 @@ impl<'a> RocketChat {
         let user = url.username();
         let token = url
             .password()
-            .ok_or_else(|| Error::Url(String::from("no password given")))?;
+            .ok_or_else(|| Error::Url(String::from("password")))?;
         let host = url
             .host_str()
-            .ok_or_else(|| Error::Url(String::from("no Host")))?;
+            .ok_or_else(|| Error::Url(String::from("host")))?;
         let port = url.port();
 
         //build url
@@ -113,14 +113,14 @@ impl super::Service<Error> for RocketChat {
         let user = url.username();
         let token = url
             .password()
-            .ok_or_else(|| Error::Url(String::from("no password given")))?;
+            .ok_or_else(|| Error::Url(String::from("password")))?;
         let host = url.host_str().unwrap();
         let port = url.port();
         let channel = url
             .path_segments()
-            .ok_or_else(|| Error::Url(String::from("no channel given")))?
+            .ok_or_else(|| Error::Url(String::from("channel")))?
             .next()
-            .ok_or_else(|| Error::Url(String::from("no channel given")))?;
+            .ok_or_else(|| Error::Url(String::from("channel")))?;
 
         //build url
         let url = match (https, port) {
