@@ -1,12 +1,16 @@
-mod service;
+// #![warn(missing_docs)]
+#![doc = include_str!("../Readme.md")]
 
-#[derive(Clone)]
-pub enum Message {
-    Text(String),
-    // Link(Url),
-}
+use message::Message;
 
-pub async fn announce(targets: Vec<&str>, msg: Message) -> Result<(), service::ServiceError> {
+pub mod message;
+pub mod service;
+
+/// Sends the same messages to multiple services.
+///
+/// If a Error is encountered while sending a message the following urls that follow
+/// will be canceled.
+pub async fn announce(urls: Vec<url::Url>, msg: &Message<'_>) -> Result<(), service::ServiceError> {
     //build client
     let mut agent = reqwest::header::HeaderMap::new();
     agent.insert(
@@ -18,13 +22,12 @@ pub async fn announce(targets: Vec<&str>, msg: Message) -> Result<(), service::S
     let client = reqwest::ClientBuilder::new()
         .use_rustls_tls()
         .default_headers(agent)
-        .build()
-        .unwrap();
+        .build()?;
 
     //build requests for each given target
     let mut requests = vec![];
-    for target in targets {
-        requests.push(service::decide_service(&client, target, &msg)?);
+    for url in urls {
+        requests.push(service::decide_service(&client, &url, &msg)?);
     }
 
     //send each request
