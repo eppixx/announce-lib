@@ -1,6 +1,4 @@
-# announce
-
-This crate allows to send messages (text, images, audio, video) to some supported services.
+This crate allows to send messages (text, images, audio, video) to supported services.
 
 # Supported services
 Currently supported services are:
