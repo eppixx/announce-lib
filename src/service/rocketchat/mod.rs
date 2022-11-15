@@ -5,6 +5,7 @@
 
 use thiserror::Error;
 
+/// Message is to be used with this module
 pub mod message;
 mod tests;
 

@@ -27,7 +27,7 @@ pub trait Service<Error> {
     /// Returns a Vec of supported schemas
     fn schema() -> Vec<&'static str>;
 
-    // shouldn't be used
+    // shouldn't be used by the user
     // either use the crate::annoucne(..) method
     // or the announce method of a specific service
     #[doc(hidden)]

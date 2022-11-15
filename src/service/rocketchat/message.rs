@@ -3,7 +3,7 @@ use serde::Serialize;
 use crate::message::Message as CrateMessage;
 
 /// Allows for "tables" or "columns" to be displayed on messages.
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct Fields<'a> {
     #[serde(default)]
@@ -13,7 +13,7 @@ pub struct Fields<'a> {
 }
 
 /// An attachment to a message
-#[derive(Serialize, Debug, Default)]
+#[derive(Serialize, Debug, Clone, Default)]
 #[serde(rename_all = "snake_case")]
 pub struct Attachment<'a> {
     /// color on the left side; accepts all background-css accepts
@@ -37,6 +37,7 @@ pub struct Attachment<'a> {
 }
 
 impl<'a> Attachment<'a> {
+    /// decides the type of url by the file ending
     pub fn link(&mut self, url: &'a str) {
         let image_endings = vec!["png", "tiff", "jpg", "jpeg", "webp", "gif", "bmp"];
         let video_endings = vec![
@@ -58,8 +59,8 @@ impl<'a> Attachment<'a> {
     }
 }
 
-/// Main body of a message
-#[derive(Serialize, Debug)]
+/// Main body of a message to be used by this module
+#[derive(Serialize, Debug, Clone)]
 pub struct Message<'a> {
     channel: String,
     pub text: Option<&'a str>,
@@ -70,6 +71,7 @@ pub struct Message<'a> {
 }
 
 impl<'a> Message<'a> {
+    /// creates a message for a channel
     pub fn new(channel: &str) -> Self {
         let channel = if channel.starts_with('#') {
             format!("#{}", channel)
@@ -86,6 +88,19 @@ impl<'a> Message<'a> {
         }
     }
 
+    /// creates a copy of the message, but for another channel
+    pub fn other_channel(other: &Self, channel: &str) -> Self {
+        let channel = if channel.starts_with('#') {
+            format!("#{}", channel)
+        } else {
+            String::from(channel)
+        };
+        let mut clone = other.clone();
+        clone.channel = channel;
+        clone
+    }
+
+    /// converts a crate::Message to Message of this module
     pub(super) fn populate(&mut self, msg: &'a CrateMessage) {
         match msg {
             CrateMessage::Text(s) => self.text = Some(s),
