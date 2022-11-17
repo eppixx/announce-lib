@@ -34,9 +34,55 @@ pub enum Error {
 }
 
 /// A implementation of messaging to a Rocket.Chat instance
-pub struct RocketChat {}
+pub struct RocketChat {
+    https: bool,
+    user: String,
+    token: String,
+    host: String,
+    port: Option<u16>,
+    channel: Option<String>,
+}
 
-impl<'a> RocketChat {
+impl RocketChat {
+    /// Creates a RocketChat struct from a url
+    fn from_url(url: &url::Url) -> Result<Self, Error> {
+        if !Self::match_scheme(url) {
+            return Err(Error::WrongScheme(format!("found \"{}\"", url.scheme())));
+        }
+
+        //extract from url
+        let https = url.scheme() == "rocketchats";
+        let user = url.username();
+        let token = url
+            .password()
+            .ok_or_else(|| Error::Url(String::from("password")))?;
+        let host = url
+            .host_str()
+            .ok_or_else(|| Error::Url(String::from("host")))?;
+        let port = url.port();
+        let channel = url.path_segments().map(|mut path| path.next().unwrap());
+
+        Ok(Self {
+            https,
+            user: String::from(user),
+            token: String::from(token),
+            host: String::from(host),
+            port,
+            channel: channel.map(String::from),
+        })
+    }
+
+    /// Returns the url that the message will be send to
+    fn build_url(&self) -> Result<url::Url, Error> {
+        let url = match (self.https, self.port) {
+            (true, None) => format!("https://{}/api/v1/chat.postMessage", self.host),
+            (false, None) => format!("http://{}/api/v1/chat.postMessage", self.host),
+            (true, Some(p)) => format!("https://{}:{}/api/v1/chat.postMessage", self.host, p),
+            (false, Some(p)) => format!("http://{}:{}/api/v1/chat.postMessage", self.host, p),
+        };
+        Ok(reqwest::Url::parse(&url)?)
+    }
+
     /// Accepts the following url formatings:
     /// * rocketchat://user:token@host{:port}
     /// * rocketchats://user:token@host{:port}
@@ -57,34 +103,14 @@ impl<'a> RocketChat {
         url: &url::Url,
         msg: &Message<'_>,
     ) -> Result<reqwest::Response, Error> {
-        if !Self::match_scheme(url) {
-            return Err(Error::WrongScheme(format!("found \"{}\"", url.scheme())));
-        }
-        //extract from url
-        let https = url.scheme() == "rocketchats";
-        let user = url.username();
-        let token = url
-            .password()
-            .ok_or_else(|| Error::Url(String::from("password")))?;
-        let host = url
-            .host_str()
-            .ok_or_else(|| Error::Url(String::from("host")))?;
-        let port = url.port();
-
-        //build url
-        let url = match (https, port) {
-            (true, None) => format!("https://{}/api/v1/chat.postMessage", host),
-            (false, None) => format!("http://{}/api/v1/chat.postMessage", host),
-            (true, Some(p)) => format!("https://{}:{}/api/v1/chat.postMessage", host, p),
-            (false, Some(p)) => format!("http://{}:{}/api/v1/chat.postMessage", host, p),
-        };
-        let url = reqwest::Url::parse(&url)?;
+        let info = Self::from_url(url)?;
+        let url = info.build_url()?;
 
         //build request
         let builder = client.request(reqwest::Method::POST, url);
         let req = builder
-            .header("x-auth-token", token)
-            .header("x-user-id", user)
+            .header("x-auth-token", info.token)
+            .header("x-user-id", info.user)
             .header("content-type", "applicatioin/json")
             .json(&msg)
             .build()?;
@@ -108,45 +134,56 @@ impl super::Service<Error> for RocketChat {
         url: &url::Url,
         msg: &CrateMessage,
     ) -> Result<reqwest::Request, Error> {
-        //extract information from target
-        let https = url.scheme() == "rocketchats";
-        let user = url.username();
-        let token = url
-            .password()
-            .ok_or_else(|| Error::Url(String::from("password")))?;
-        let host = url.host_str().unwrap();
-        let port = url.port();
-        let channel = url
-            .path_segments()
-            .ok_or_else(|| Error::Url(String::from("channel")))?
-            .next()
-            .ok_or_else(|| Error::Url(String::from("channel")))?;
-
-        //build url
-        let url = match (https, port) {
-            (true, None) => format!("https://{}/api/v1/chat.postMessage", host),
-            (false, None) => format!("http://{}/api/v1/chat.postMessage", host),
-            (true, Some(p)) => format!("https://{}:{}/api/v1/chat.postMessage", host, p),
-            (false, Some(p)) => format!("http://{}:{}/api/v1/chat.postMessage", host, p),
-        };
-        let url = reqwest::Url::parse(&url)?;
+        let info = Self::from_url(url)?;
+        let url = info.build_url()?;
 
         //build body from msg
-        let mut body = Message::new(channel);
+        let mut body = Message::new(
+            &info
+                .channel
+                .ok_or_else(|| Error::Url(String::from("channel")))?,
+        );
         body.populate(msg);
 
         //build request
         let builder = client.request(reqwest::Method::POST, url);
         let req = builder
-            .header("x-auth-token", token)
-            .header("x-user-id", user)
+            .header("x-auth-token", info.token)
+            .header("x-user-id", info.user)
             .header("content-type", "applicatioin/json")
             .json(&body)
             .build()?;
 
-        dbg!(body);
-        dbg!(&req);
+        log::trace!("{:?}", body);
+        log::trace!("{:?}", req);
 
         Ok(req)
+    }
+}
+
+mod testss {
+    #[test]
+    fn test_from_url() {
+        let url = "rocketchat://user:token@host:3000";
+        let url = url::Url::parse(url).unwrap();
+        let rocket = super::RocketChat::from_url(&url).unwrap();
+        assert_eq!(false, rocket.https);
+        assert_eq!(String::from("user"), rocket.user);
+        assert_eq!(String::from("token"), rocket.token);
+        assert_eq!(String::from("host"), rocket.host);
+        assert_eq!(Some(3000u16), rocket.port);
+        assert_eq!(None, rocket.channel);
+
+        let url = "rocketchat://user:token@host/";
+        let url = url::Url::parse(url).unwrap();
+        let rocket = super::RocketChat::from_url(&url).unwrap();
+        assert_eq!(None, rocket.port);
+        assert_eq!(Some(String::from("")), rocket.channel);
+
+        let url = "rocketchats://user:token@host:3000/channel";
+        let url = url::Url::parse(url).unwrap();
+        let rocket = super::RocketChat::from_url(&url).unwrap();
+        assert_eq!(true, rocket.https);
+        assert_eq!(Some(String::from("channel")), rocket.channel);
     }
 }

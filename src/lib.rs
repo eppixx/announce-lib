@@ -27,7 +27,7 @@ pub async fn announce(urls: Vec<url::Url>, msg: &Message<'_>) -> Result<(), serv
     //build requests for each given target
     let mut requests = vec![];
     for url in urls {
-        requests.push(service::decide_service(&client, &url, &msg)?);
+        requests.push(service::decide_service(&client, &url, msg)?);
     }
 
     //send each request
