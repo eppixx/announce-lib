@@ -4,6 +4,7 @@ use thiserror::Error;
 
 use crate::message::Message;
 
+pub mod discord;
 pub mod rocketchat;
 
 /// Contains every Error which can be encountered in announce.
