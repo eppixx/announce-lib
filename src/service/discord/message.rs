@@ -10,20 +10,24 @@ use crate::message::Message as CrateMessage;
 #[derive(Serialize, Debug, Default)]
 pub struct Embed<'a> {
     /// title of emebed
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<&'a str>,
 
     // /// type of [Embed]
     // #[serde(rename = "type")]
     // pub typ: Option<&'a str>,
     /// desciption of embed
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<&'a str>,
 
     /// url of embed
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<&'a str>,
 
     // /// timestamp of embed content
     // pub timestamp: Option<&'a str>,
     /// color code of embed
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<i32>,
     // /// footer information
     // footer,
@@ -50,12 +54,15 @@ pub struct Embed<'a> {
 #[derive(Serialize, Debug, Default)]
 pub struct Message<'a> {
     /// the message contents (up to 2000 characters)
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<&'a str>,
 
     /// override the default username of the webhook
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub username: Option<&'a str>,
 
     /// override the default avatar of the webhook
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_url: Option<&'a str>,
 
     /// true if this is a TTS message
@@ -79,9 +86,11 @@ pub struct Message<'a> {
     // /// attachment objects with filename and description
     // attachments: Vec<Attachment>,
     /// message flags combined as a bitfield (only SUPPRESS_EMBEDS can be set)
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub flags: Option<i32>,
 
     /// name of thread to create (requires the webhook channel to be a forum channel)
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub thread_name: Option<&'a str>,
 }
 

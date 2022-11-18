@@ -26,48 +26,61 @@ pub struct Fields<'a> {
 #[serde(rename_all = "snake_case")]
 pub struct Attachment<'a> {
     /// The color you want the order on the left side to be.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<&'a str>,
 
     /// The Text to display for this attachment, differs from the message's text.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<&'a str>,
 
     /// Displays the time next to the text portion.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ts: Option<chrono::DateTime<chrono::Utc>>,
 
     /// An image that displays to the left of the text.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub thumb_url: Option<&'a str>,
 
     /// Only applicable if the ts is provided, as it makes the time clickable to this link.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub message_link: Option<&'a str>,
 
     /// Causes the image, audio, and video sections to be hiding when collapsed is true.
     pub collapsed: bool,
 
     /// Name of the author.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub author_name: Option<&'a str>,
 
     /// Providing this makes the author name clickable and points to this link.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub author_link: Option<&'a str>,
 
     /// Displays a tiny icon to the left of the Author's name.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub author_icon: Option<&'a str>,
 
     /// Title to display for this attachment, displays under the author.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<&'a str>,
 
     /// Providing this makes the title clickable, pointing to this link.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title_link: Option<&'a str>,
 
     /// When this is true, a download icon appears and clicking this saves the link to file.
     pub title_link_download: bool,
 
     /// The image to display, will be "big" and easy to see.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub image_url: Option<&'a str>,
 
     /// Video file to play, only supports what [html video](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/video) does.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub video_url: Option<&'a str>,
 
     /// Audio file to play, only supports what [html audio](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/audio) does.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub audio_url: Option<&'a str>,
 
     /// An array of [Attachment Field Objects](Fields).
@@ -106,15 +119,19 @@ pub struct Message<'a> {
     channel: String,
 
     /// The text of the message to send, is optional because of attachments.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<&'a str>,
 
     /// This will cause the message's name to appear as the given alias, but your username will still display.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub alias: Option<&'a str>,
 
     /// If provided, this will make the avatar on this message be an [emoji](https://emoji.codes/).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub emoji: Option<&'a str>,
 
     /// If provided, this will make the avatar use the provided image url.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar: Option<&'a str>,
 
     /// See [Attachment]
