@@ -33,12 +33,12 @@ pub trait Service<Error> {
     #[doc(hidden)]
     fn build_request(
         client: &reqwest::Client,
-        target: &url::Url,
+        target: &reqwest::Url,
         msg: &Message,
     ) -> Result<reqwest::Request, Error>;
 
     /// Returns true if a given url matches with a schema of a given service
-    fn match_scheme(url: &url::Url) -> bool {
+    fn match_scheme(url: &reqwest::Url) -> bool {
         Self::schema().iter().any(|s| &url.scheme() == s)
     }
 }
@@ -46,7 +46,7 @@ pub trait Service<Error> {
 /// Tests url with all services and returns a request if it does
 pub fn decide_service(
     client: &reqwest::Client,
-    url: &url::Url,
+    url: &reqwest::Url,
     msg: &Message,
 ) -> Result<reqwest::Request, ServiceError> {
     //cascade of services

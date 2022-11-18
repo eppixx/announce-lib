@@ -15,13 +15,13 @@ mod tests {
         //or use any other type of CrateMessage
 
         //get url from environment
-        let url = std::env::var("URL").expect("environment variable URL needs to be set");
+        let url = std::env::var("ROCKET_URL").expect("environment variable URL needs to be set");
         assert_ne!(url, "", "environment variable URL is empty");
         let url = url::Url::parse(&url).expect("given URL is in the wrong format");
 
         let req = RocketChat::build_request(&client, &url, &msg);
         let response = client.execute(req.unwrap()).await.unwrap();
-        println!("{:?}", response);
+        dbg!(&response);
     }
 
     #[tokio::test]
@@ -44,8 +44,10 @@ mod tests {
         attachment.collapsed = true;
         msg.attachments.push(attachment);
 
+        dbg!(&serde_json::to_string(&msg));
+
         //get url from environment
-        let url = std::env::var("URL").expect("environment variable URL needs to be set");
+        let url = std::env::var("ROCKET_URL").expect("environment variable URL needs to be set");
         assert_ne!(url, "", "environment variable URL is empty");
         let url = url::Url::parse(&url).expect("given URL is in the wrong format");
 

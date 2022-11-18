@@ -10,7 +10,10 @@ pub mod service;
 ///
 /// If a Error is encountered while sending a message the following urls that follow
 /// will be canceled.
-pub async fn announce(urls: Vec<url::Url>, msg: &Message<'_>) -> Result<(), service::ServiceError> {
+pub async fn announce(
+    urls: Vec<reqwest::Url>,
+    msg: &Message<'_>,
+) -> Result<(), service::ServiceError> {
     //build client
     let mut agent = reqwest::header::HeaderMap::new();
     agent.insert(

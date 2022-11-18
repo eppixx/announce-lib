@@ -1,4 +1,4 @@
-//! Rocket.Chat is a open source team chat platform
+//! Rocket.Chat is a open source team chat platform.
 //!
 //! * Homepage: <https://www.rocket.chat/>
 //! * Reference API: <https://developer.rocket.chat/reference/api/rest-api/endpoints/core-endpoints/chat-endpoints/postmessage>
@@ -45,7 +45,7 @@ pub struct RocketChat {
 
 impl RocketChat {
     /// Creates a RocketChat struct from a url
-    fn from_url(url: &url::Url) -> Result<Self, Error> {
+    fn from_url(url: &reqwest::Url) -> Result<Self, Error> {
         if !Self::match_scheme(url) {
             return Err(Error::WrongScheme(format!("found \"{}\"", url.scheme())));
         }
@@ -73,7 +73,7 @@ impl RocketChat {
     }
 
     /// Returns the url that the message will be send to
-    fn build_url(&self) -> Result<url::Url, Error> {
+    fn build_url(&self) -> Result<reqwest::Url, Error> {
         let url = match (self.https, self.port) {
             (true, None) => format!("https://{}/api/v1/chat.postMessage", self.host),
             (false, None) => format!("http://{}/api/v1/chat.postMessage", self.host),
@@ -83,16 +83,16 @@ impl RocketChat {
         Ok(reqwest::Url::parse(&url)?)
     }
 
-    /// Accepts the following url formatings:
-    /// * rocketchat://user:token@host{:port}
-    /// * rocketchats://user:token@host{:port}
+    /// Accepts the following url formattings:
+    /// * rocketchat://USER:TOKEN@HOST{:PORT}
+    /// * rocketchats://USER:TOKEN@HOST{:PORT}
     /// # Example
     /// ```no_run
     /// use announce::service::rocketchat;
     ///
     /// let client = reqwest::Client::new();
     /// let url = "rocketchats://user:token@host.com";
-    /// let url = url::Url::parse(url).unwrap();
+    /// let url = reqwest::Url::parse(url).unwrap();
     /// let msg = rocketchat::Message::new("some_channel");
     /// // modify msg to your liking
     ///
@@ -100,7 +100,7 @@ impl RocketChat {
     /// ```
     pub async fn announce(
         client: &reqwest::Client,
-        url: &url::Url,
+        url: &reqwest::Url,
         msg: &Message<'_>,
     ) -> Result<reqwest::Response, Error> {
         let info = Self::from_url(url)?;
@@ -114,6 +114,7 @@ impl RocketChat {
             .header("content-type", "applicatioin/json")
             .json(&msg)
             .build()?;
+        log::trace!("{:?}", req);
 
         Ok(client.execute(req).await?)
     }
@@ -131,7 +132,7 @@ impl super::Service<Error> for RocketChat {
     #[doc(hidden)]
     fn build_request(
         client: &reqwest::Client,
-        url: &url::Url,
+        url: &reqwest::Url,
         msg: &CrateMessage,
     ) -> Result<reqwest::Request, Error> {
         let info = Self::from_url(url)?;
