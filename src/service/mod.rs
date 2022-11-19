@@ -21,6 +21,11 @@ pub enum ServiceError {
     #[error("Rocket.Chat error: {0}")]
     RocketChat(#[from] rocketchat::Error),
 
+    #[cfg(feature = "discord")]
+    /// Error while handling Discord Api
+    #[error("Discord error: {0}")]
+    Discord(#[from] discord::Error),
+
     /// Error when no matching schema was found
     #[error("Schema does not match a supported service (create an issue for a new service)")]
     NoMatchingSchema,
@@ -58,7 +63,10 @@ pub fn decide_service(
     if rocketchat::RocketChat::match_scheme(url) {
         return Ok(rocketchat::RocketChat::build_request(client, url, msg)?);
     }
-    //TODO discord
+    #[cfg(feature = "discord")]
+    if discord::Discord::match_scheme(url) {
+        return Ok(discord::Discord::build_request(client, url, msg)?);
+    }
 
     Err(ServiceError::NoMatchingSchema)
 }
