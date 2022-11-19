@@ -43,5 +43,13 @@ The drawback of this way is that you are less expressive this way as Message use
 
 # Features
 
-Every service is contained by a seperate feature so you get only the services you need.
-To find out the the name of the features visit the feature section in Cargo.toml.
+By default all services are included.
+Every service is contained by a seperate feature, so it is possible to get only the services you need.
+To find out the the name of the features visit the feature section in Cargo.toml and use it like this.
+```toml ignore
+## in Cargo.toml
+[dependencies]
+## ...
+announce = { version = "vx.x.x", default-features = false, features = ["rocketchat"] }
+## ...
+```

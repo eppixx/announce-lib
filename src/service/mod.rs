@@ -54,6 +54,7 @@ pub fn decide_service(
     msg: &Message,
 ) -> Result<reqwest::Request, ServiceError> {
     //cascade of services
+    #[cfg(feature = "rocketchat")]
     if rocketchat::RocketChat::match_scheme(url) {
         return Ok(rocketchat::RocketChat::build_request(client, url, msg)?);
     }

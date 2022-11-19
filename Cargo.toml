@@ -31,7 +31,6 @@ pretty_env_logger = "0.4.0"
 
 # https://doc.rust-lang.org/cargo/reference/features.html
 [features]
-default = []
-all = ["rocketchat", "discord"]
+default = ["rocketchat", "discord"]
 rocketchat = ["chrono/clock"]
 discord = []
