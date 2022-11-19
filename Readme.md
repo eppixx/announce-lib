@@ -2,7 +2,7 @@ This crate allows to send messages (text, images, audio, video) to supported ser
 
 # Supported services
 Currently supported services are:
-* [Rocket.Chat](service::rocketchat::RocketChat)
+* Rocket.Chat
 
 # How to use
 
@@ -11,7 +11,7 @@ There are two ways to use this crate.
 ## Announcing with a specific service
 You can choose to use a specific service like Rocket.Chat, create a Message from its module and use the announce method of Rocket.Chat.
 
-An example using [Rocket.Chat](service::rocketchat::RocketChat)
+An example using Rocket.Chat
 ```no_run
 use announce::service::rocketchat;
 
@@ -30,8 +30,8 @@ It's also possible to announce through more than one service at the same time. T
 
 ```no_run
 let urls = vec![
-  url::Url::parse("rocketchats://user:token@host.com/channel").unwrap(),
-  url::Url::parse("rocketchat://user2:token2@host.com/channel2").unwrap(),
+  url::Url::parse("rocketchats://user:token@secure_host.com/channel").unwrap(),
+  url::Url::parse("rocketchat://user2:token2@unsecure_host.com/channel2").unwrap(),
 ];
 let msg = announce::message::Message::Text("A sample Message to channel and channel2");
 // or use another kind of enum Message
@@ -41,3 +41,7 @@ announce::announce(urls, &msg);
 
 The drawback of this way is that you are less expressive this way as Message uses a subset of features of any specific service.
 
+# Features
+
+Every service is contained by a seperate feature so you get only the services you need.
+To find out the the name of the features visit the feature section in Cargo.toml.

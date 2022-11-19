@@ -4,7 +4,9 @@ use thiserror::Error;
 
 use crate::message::Message;
 
+#[cfg(feature = "discord")]
 pub mod discord;
+#[cfg(feature = "rocketchat")]
 pub mod rocketchat;
 
 /// Contains every Error which can be encountered in announce.
@@ -14,6 +16,7 @@ pub enum ServiceError {
     #[error("reqwest error: {0}")]
     Reqwest(#[from] reqwest::Error),
 
+    #[cfg(feature = "rocketchat")]
     /// Error while handling RocketChat Api
     #[error("Rocket.Chat error: {0}")]
     RocketChat(#[from] rocketchat::Error),
