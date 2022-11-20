@@ -23,6 +23,9 @@ tokio = { version = "1.21.2", features = ["macros"] }
 thiserror = "1.0.37"
 log = "0.4.17"
 
+# optional for features
+zbus = { version = "3.5.0", optional = true }
+
 
 # https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#development-dependencies
 [dev-dependencies]
@@ -34,3 +37,4 @@ pretty_env_logger = "0.4.0"
 default = ["rocketchat", "discord"]
 rocketchat = ["chrono/clock"]
 discord = []
+dbus = ["dep:zbus"]
