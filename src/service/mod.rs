@@ -4,6 +4,8 @@ use thiserror::Error;
 
 use crate::message::Message;
 
+#[cfg(feature = "dbus")]
+pub mod dbus;
 #[cfg(feature = "discord")]
 pub mod discord;
 #[cfg(feature = "rocketchat")]
