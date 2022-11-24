@@ -1,36 +1,21 @@
-use thiserror::Error;
+//! Dbus is a interprocess communication service often found on Linux systems.
+//!
+//! This module uses the notification service which is provided by
+//! most Linux desktop environments.
 
-/// Errors which can be encountered for this module
-#[derive(Error, Debug)]
-pub enum Error {
-    /// A reqwest error
-    #[error("Reqwest error: {0}")]
-    Reqwest(#[from] reqwest::Error),
+/// Message is to be used with this module
+pub mod message;
 
-    /// A parse error from a missformed url
-    #[error("Url parse error: {0}")]
-    Parse(#[from] url::ParseError),
+use crate::service::Service;
+pub use message::Message;
 
-    /// A valid Url which misses a needed field
-    #[error("missing url field: {0}")]
-    Url(String),
-
-    /// A zbus error
-    #[error("zbus error: {0}")]
-    Zbus(#[from] zbus::Error),
-
-    /// Using the wrong schema with service
-    #[error("Wrong scheme for service: {0}")]
-    WrongScheme(String),
-}
-
+//TODO remove this when following issue is solved
+// https://gitlab.freedesktop.org/dbus/zbus/-/issues/87
+#[zbus::dbus_proxy(assume_defaults = true, interface = "org.freedesktop.Notifications")]
 /// Freedesktop Notification [Reference](https://specifications.freedesktop.org/notification-spec/notification-spec-latest.html)
-#[zbus::dbus_proxy(
-    interface = "org.freedesktop.Notifications",
-    default_service = "org.freedesktop.Notifications",
-    default_path = "/org/freedesktop/Notifications"
-)]
 trait Notifications {
+    // this function is not defined by us, but the dbus specification
+    #[allow(clippy::too_many_arguments)]
     fn notify(
         &self,
         app_name: &str,
@@ -44,35 +29,141 @@ trait Notifications {
     ) -> zbus::Result<u32>;
 }
 
-pub struct Dbus {}
+/// A implementation of messaging to a Dbus notification service
+pub struct Dbus {
+    app_name: Option<String>,
+    app_icon: Option<String>,
+    expire_timeout: Option<i32>,
+}
 
 impl Dbus {
-    pub async fn announce(/* msg: &Message<'_> */) -> Result<(), Error> {
+    /// Creates a Dbus struct from a url
+    fn from_url(url: &reqwest::Url) -> Result<Self, crate::Error> {
+        if !Self::match_scheme(url) {
+            return Err(crate::Error::WrongScheme(format!(
+                "found \"{}\"",
+                url.scheme()
+            )));
+        }
+
+        let app_name = match url.username() {
+            name if name.is_empty() => None,
+            name => Some(String::from(name)),
+        };
+
+        //extract from url
+        Ok(Self {
+            app_name,
+            app_icon: url.password().map(String::from),
+            expire_timeout: url.port().map(i32::from),
+        })
+    }
+
+    /// Accepts the following url formattings:
+    ///* dbus://{APP_NAME@}{ICON_NAME}{:TIMEOUT}
+    /// ```no_run
+    /// use announce::service::dbus;
+    ///
+    /// let mut msg = dbus::Message::default();
+    /// msg.summary = "Header of message";
+    /// msg.body = "Main body of message";
+    /// // modify msg to your linking
+    ///
+    /// dbus::Dbus::announce(&msg);
+    /// ```
+    pub async fn announce(msg: &Message<'_>) -> Result<u32, crate::Error> {
         let connection = zbus::Connection::session().await?;
         let proxy = NotificationsProxy::new(&connection).await?;
 
         let reply = proxy
             .notify(
-                "Announce",
-                0,
-                "insert-image",
-                "test",
-                "nice text",
-                &[],
-                std::collections::HashMap::new(),
-                0,
+                msg.app_name,
+                msg.replaces_id,
+                msg.app_icon,
+                msg.summary,
+                msg.body,
+                msg.actions,
+                msg.hints.clone(),
+                msg.expire_timeout,
             )
             .await?;
-        println!("{reply}");
-        Ok(())
+        log::trace!("dbus returned: {:?}", reply);
+
+        Ok(reply)
+    }
+}
+
+impl super::Service for Dbus {
+    fn schema() -> Vec<&'static str> {
+        vec!["dbus"]
+    }
+
+    /// This is used by the announce method in [crate].
+    /// Allowed url's are:
+    /// * dbus://{APP_NAME@}{ICON_NAME}{:TIMEOUT}
+    #[doc(hidden)]
+    fn build_request(
+        announce: &crate::Announce,
+        url: &reqwest::Url,
+        msg: &crate::Message,
+    ) -> Result<super::ServiceResult, crate::Error> {
+        let info = Self::from_url(url)?;
+        let proxy = NotificationsProxyBlocking::new(&announce.dbus_con)?;
+
+        let mut message = Message::default();
+        match msg {
+            crate::Message::Text(s) => message.body = s,
+            _ => todo!(),
+        };
+        let app_name = info
+            .app_name
+            .unwrap_or_else(|| String::from(message.app_name));
+        message.app_name = &app_name;
+        let app_icon = info
+            .app_icon
+            .unwrap_or_else(|| String::from(message.app_icon));
+        message.app_icon = &app_icon;
+        message.expire_timeout = info.expire_timeout.unwrap_or(message.expire_timeout);
+
+        let reply = proxy.notify(
+            message.app_name,
+            message.replaces_id,
+            message.app_icon,
+            message.summary,
+            message.body,
+            message.actions,
+            message.hints,
+            message.expire_timeout,
+        )?;
+        log::trace!("{:?}", reply);
+
+        Ok(super::ServiceResult::Dbus(reply))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::service::Service;
+
     #[tokio::test]
     async fn test_dbus_announce() {
-        let result = super::Dbus::announce().await.unwrap();
-        // dbg!(result);
+        let mut msg = super::Message::default();
+        msg.app_name = "Announce";
+        msg.summary = "summary";
+        msg.body = "body";
+
+        let result = super::Dbus::announce(&msg).await.unwrap();
+        dbg!(result);
+    }
+
+    #[tokio::test]
+    async fn test_dbus_msg() {
+        let announce = crate::Announce::new().unwrap();
+        let msg = crate::Message::Text("ein test");
+        let url = "dbus://Announce@dialog_information:1";
+        let url = reqwest::Url::parse(&url).expect("faulty url");
+
+        let response = super::Dbus::build_request(&announce, &url, &msg);
+        let _ = response.unwrap();
     }
 }

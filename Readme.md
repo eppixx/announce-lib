@@ -3,6 +3,7 @@ This crate allows to send messages (text, images, audio, video) to supported ser
 # Supported services
 Currently supported services are:
 * Rocket.Chat
+* D-Bus
 
 # How to use
 
@@ -33,10 +34,11 @@ let urls = vec![
   url::Url::parse("rocketchats://user:token@secure_host.com/channel").unwrap(),
   url::Url::parse("rocketchat://user2:token2@unsecure_host.com/channel2").unwrap(),
 ];
-let msg = announce::message::Message::Text("A sample Message to channel and channel2");
+let ann = announce::Announce::new().unwrap();
+let msg = announce::Message::Text("A sample Message to channel and channel2");
 // or use another kind of enum Message
 
-announce::announce(urls, &msg);
+ann.announce(urls, &msg);
 ```
 
 The drawback of this way is that you are less expressive this way as Message uses a subset of features of any specific service.
