@@ -52,7 +52,7 @@ pub struct Message<'a> {
     /// server may be able to make use of.
     ///
     /// See Hints for a list of available hints.
-    pub hints: std::collections::HashMap<&'a str, &'a zvariant::Value<'a>>,
+    pub hints: std::collections::HashMap<&'a str, zvariant::Value<'a>>,
 
     ///  The timeout time in milliseconds since the display of the notification at
     /// which the notification should automatically close.
@@ -62,6 +62,31 @@ pub struct Message<'a> {
     ///
     /// If 0, the notification never expires.
     pub expire_timeout: i32,
+}
+
+impl<'a> Message<'a> {
+    /// add a standard hint; more typesafe than inserting manually to member hints
+    pub fn add_standard_hint(&mut self, hint: &'a StandardHint) {
+        use zvariant::Value;
+
+        let (hint, value) = match hint {
+            StandardHint::ActionIcons(status) => ("action-icons", Value::new(status)),
+            StandardHint::Category(cat) => ("category", Value::new(cat)),
+            StandardHint::DesktopEntry(entry) => ("desktop-entry", Value::new(entry)),
+            StandardHint::ImageData(data) => ("image-data", data.clone()),
+            StandardHint::ImagePath(path) => ("image-path", Value::new(path)),
+            StandardHint::Resident(status) => ("resident", Value::new(status)),
+            StandardHint::SoundFile(file) => ("sound-file", Value::new(file)),
+            StandardHint::SoundName(name) => ("sound-name", Value::new(name)),
+            StandardHint::SupressSound(status) => ("supress-sound", Value::new(status)),
+            StandardHint::Transient(status) => ("transient", Value::new(status)),
+            StandardHint::X(value) => ("x", Value::new(value)),
+            StandardHint::Y(value) => ("y", Value::new(value)),
+            StandardHint::Urgency(byte) => ("urgency", Value::new(byte)),
+        };
+
+        self.hints.insert(hint, value);
+    }
 }
 
 impl<'a> Default for Message<'a> {
@@ -77,4 +102,64 @@ impl<'a> Default for Message<'a> {
             expire_timeout: 0,
         }
     }
+}
+
+/// Hints that are defined by the specification that may be supported by the notification
+/// server
+pub enum StandardHint<'a> {
+    /// When set, a server that has the "action-icons" capability will attempt to
+    /// interpret any action identifier as a named icon. The localized display name
+    /// will be used to annotate the icon for accessibility purposes. The icon name
+    /// should be compliant with the Freedesktop.org Icon Naming Specification.
+    ActionIcons(bool),
+
+    /// The type of notification this is.
+    Category(String),
+
+    /// This specifies the name of the desktop filename representing the calling
+    /// program. This should be the same as the prefix used for the application's
+    /// .desktop file. An example would be "rhythmbox" from "rhythmbox.desktop".
+    /// This can be used by the daemon to retrieve the correct icon for the application,
+    /// for logging purposes, etc.
+    DesktopEntry(String),
+
+    /// This is a raw data image format which describes the width, height, rowstride,
+    /// has alpha, bits per sample, channels and image data respectively.
+    ImageData(zvariant::Value<'a>),
+
+    /// Alternative way to define the notification image. See [Icons and Images](https://specifications.freedesktop.org/notification-spec/notification-spec-latest.html#icons-and-images).
+    ImagePath(String),
+
+    /// When set the server will not automatically remove the notification when an
+    /// action has been invoked. The notification will remain resident in the server
+    /// until it is explicitly removed by the user or by the sender. This hint is
+    /// likely only useful when the server has the "persistence" capability.
+    Resident(bool),
+
+    /// The path to a sound file to play when the notification pops up.
+    SoundFile(String),
+
+    /// A themeable named sound from the freedesktop.org sound naming specification
+    /// to play when the notification pops up. Similar to icon-name, only for sounds.
+    /// An example would be "message-new-instant".
+    SoundName(String),
+
+    /// Causes the server to suppress playing any sounds, if it has that ability.
+    /// This is usually set when the client itself is going to play its own sound.
+    SupressSound(bool),
+
+    /// When set the server will treat the notification as transient and by-pass
+    /// the server's persistence capability, if it should exist.
+    Transient(bool),
+
+    /// Specifies the X location on the screen that the notification should point to.
+    /// The "y" hint must also be specified.
+    X(i32),
+
+    /// Specifies the Y location on the screen that the notification should point to.
+    /// The "x" hint must also be specified.
+    Y(i32),
+
+    /// The urgency level.
+    Urgency(u8),
 }

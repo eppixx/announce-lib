@@ -24,7 +24,7 @@ trait Notifications {
         summary: &str,
         body: &str,
         actions: &[&str],
-        hints: std::collections::HashMap<&str, &zvariant::Value<'_>>,
+        hints: std::collections::HashMap<&str, zvariant::Value<'_>>,
         expire_timeout: i32,
     ) -> zbus::Result<u32>;
 }
