@@ -28,18 +28,23 @@ pub struct Message<'a> {
     pub embeds: Vec<Embed<'a>>,
 
     // /// allowed mentions for the message
+    // TODO implement
     // allowed_mentions: Mention,
 
     // /// the components to include with the message
+    // TODO implement
     // components,
 
     // /// the contents of the file being sent
+    // TODO implement
     // files: Vec<File>,
 
     // /// JSON encoded body of non-file params
+    // TODO implement
     // payload_json: Option<&'a str>,
 
     // /// attachment objects with filename and description
+    // TODO implement
     // attachments: Vec<Attachment>,
     /// message flags combined as a bitfield (only SUPPRESS_EMBEDS can be set)
     #[serde(skip_serializing_if = "Option::is_none")]

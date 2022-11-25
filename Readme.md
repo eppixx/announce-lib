@@ -4,6 +4,7 @@ This crate allows to send messages (text, images, audio, video) to supported ser
 Currently supported services are:
 * Rocket.Chat
 * D-Bus
+* Discord
 
 # How to use
 
