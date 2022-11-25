@@ -50,6 +50,7 @@ pub fn decide_service(
     if rocketchat::RocketChat::match_scheme(url) {
         return rocketchat::RocketChat::build_request(announce, url, msg);
     }
+    #[cfg(feature = "dbus")]
     if dbus::Dbus::match_scheme(url) {
         return dbus::Dbus::build_request(announce, url, msg);
     }
