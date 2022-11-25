@@ -1,38 +1,25 @@
 //! Contains the services which are supportet by anounce.
 
-use thiserror::Error;
-
 use crate::message::Message;
 
+#[cfg(feature = "dbus")]
+pub mod dbus;
 #[cfg(feature = "discord")]
 pub mod discord;
 #[cfg(feature = "rocketchat")]
 pub mod rocketchat;
 
-/// Contains every Error which can be encountered in announce.
-#[derive(Error, Debug)]
-pub enum ServiceError {
-    /// Error while handling requests
-    #[error("reqwest error: {0}")]
-    Reqwest(#[from] reqwest::Error),
-
-    #[cfg(feature = "rocketchat")]
-    /// Error while handling RocketChat Api
-    #[error("Rocket.Chat error: {0}")]
-    RocketChat(#[from] rocketchat::Error),
-
-    #[cfg(feature = "discord")]
-    /// Error while handling Discord Api
-    #[error("Discord error: {0}")]
-    Discord(#[from] discord::Error),
-
-    /// Error when no matching schema was found
-    #[error("Schema does not match a supported service (create an issue for a new service)")]
-    NoMatchingSchema,
+/// Type for catching results of services
+#[derive(Debug)]
+pub enum ServiceResult {
+    /// A Request that still needs to be executed
+    Reqwest(reqwest::Request),
+    /// A Dbus result
+    Dbus(u32),
 }
 
 /// A trait implemented for all services
-pub trait Service<Error> {
+pub trait Service {
     /// Returns a Vec of supported schemas
     fn schema() -> Vec<&'static str>;
 
@@ -41,10 +28,10 @@ pub trait Service<Error> {
     // or the announce method of a specific service
     #[doc(hidden)]
     fn build_request(
-        client: &reqwest::Client,
+        announce: &crate::Announce,
         target: &reqwest::Url,
         msg: &Message,
-    ) -> Result<reqwest::Request, Error>;
+    ) -> Result<ServiceResult, crate::Error>;
 
     /// Returns true if a given url matches with a schema of a given service
     fn match_scheme(url: &reqwest::Url) -> bool {
@@ -54,19 +41,22 @@ pub trait Service<Error> {
 
 /// Tests url with all services and returns a request if it does
 pub fn decide_service(
-    client: &reqwest::Client,
+    announce: &crate::Announce,
     url: &reqwest::Url,
     msg: &Message,
-) -> Result<reqwest::Request, ServiceError> {
+) -> Result<ServiceResult, crate::Error> {
     //cascade of services
     #[cfg(feature = "rocketchat")]
     if rocketchat::RocketChat::match_scheme(url) {
-        return Ok(rocketchat::RocketChat::build_request(client, url, msg)?);
+        return rocketchat::RocketChat::build_request(announce, url, msg);
+    }
+    if dbus::Dbus::match_scheme(url) {
+        return dbus::Dbus::build_request(announce, url, msg);
     }
     #[cfg(feature = "discord")]
     if discord::Discord::match_scheme(url) {
-        return Ok(discord::Discord::build_request(client, url, msg)?);
+        return discord::Discord::build_request(announce, url, msg);
     }
 
-    Err(ServiceError::NoMatchingSchema)
+    Err(crate::Error::NoMatchingSchema)
 }

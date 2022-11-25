@@ -1,9 +1,7 @@
-//! Rocket.Chat is a open source team chat platform.
+//! Rocket.Chat is an open source team chat platform.
 //!
 //! * Homepage: <https://www.rocket.chat/>
 //! * Reference API: <https://developer.rocket.chat/reference/api/rest-api/endpoints/core-endpoints/chat-endpoints/postmessage>
-
-use thiserror::Error;
 
 /// Message is to be used with this module
 pub mod message;
@@ -12,26 +10,6 @@ mod tests;
 use crate::message::Message as CrateMessage;
 use crate::service::Service;
 pub use message::Message;
-
-/// Errors which can be encountered for this module
-#[derive(Error, Debug)]
-pub enum Error {
-    /// A reqwest error
-    #[error("Reqwest error: {0}")]
-    Reqwest(#[from] reqwest::Error),
-
-    /// A parse error from a missformed url
-    #[error("url parse error: {0}")]
-    Parse(#[from] url::ParseError),
-
-    /// A valid Url which misses a needed field
-    #[error("missing url field: {0}")]
-    Url(String),
-
-    /// Using the wrong schema with service
-    #[error("Wrong scheme for service: {0}")]
-    WrongScheme(String),
-}
 
 /// A implementation of messaging to a Rocket.Chat instance
 pub struct RocketChat {
@@ -45,9 +23,12 @@ pub struct RocketChat {
 
 impl RocketChat {
     /// Creates a RocketChat struct from a url
-    fn from_url(url: &reqwest::Url) -> Result<Self, Error> {
+    fn from_url(url: &reqwest::Url) -> Result<Self, crate::Error> {
         if !Self::match_scheme(url) {
-            return Err(Error::WrongScheme(format!("found \"{}\"", url.scheme())));
+            return Err(crate::Error::WrongScheme(format!(
+                "found \"{}\"",
+                url.scheme()
+            )));
         }
 
         //extract from url
@@ -55,10 +36,10 @@ impl RocketChat {
         let user = url.username();
         let token = url
             .password()
-            .ok_or_else(|| Error::Url(String::from("password")))?;
+            .ok_or_else(|| crate::Error::MissingField(String::from("password")))?;
         let host = url
             .host_str()
-            .ok_or_else(|| Error::Url(String::from("host")))?;
+            .ok_or_else(|| crate::Error::MissingField(String::from("host")))?;
         let port = url.port();
         let channel = url.path_segments().map(|mut path| path.next().unwrap());
 
@@ -73,7 +54,7 @@ impl RocketChat {
     }
 
     /// Returns the url that the message will be send to
-    fn build_url(&self) -> Result<reqwest::Url, Error> {
+    fn build_url(&self) -> Result<reqwest::Url, crate::Error> {
         let url = match (self.https, self.port) {
             (true, None) => format!("https://{}/api/v1/chat.postMessage", self.host),
             (false, None) => format!("http://{}/api/v1/chat.postMessage", self.host),
@@ -102,7 +83,7 @@ impl RocketChat {
         client: &reqwest::Client,
         url: &reqwest::Url,
         msg: &Message<'_>,
-    ) -> Result<reqwest::Response, Error> {
+    ) -> Result<reqwest::Response, crate::Error> {
         let info = Self::from_url(url)?;
         let url = info.build_url()?;
 
@@ -114,13 +95,13 @@ impl RocketChat {
             .header("content-type", "applicatioin/json")
             .json(&msg)
             .build()?;
-        log::trace!("{:?}", req);
+        log::trace!("request: {:?}", req);
 
         Ok(client.execute(req).await?)
     }
 }
 
-impl super::Service<Error> for RocketChat {
+impl super::Service for RocketChat {
     fn schema() -> Vec<&'static str> {
         vec!["rocketchat", "rocketchats"]
     }
@@ -131,10 +112,10 @@ impl super::Service<Error> for RocketChat {
     /// * rocketchats://USER:TOKEN@HOSTNAME/CHANNEL
     #[doc(hidden)]
     fn build_request(
-        client: &reqwest::Client,
+        announce: &crate::Announce,
         url: &reqwest::Url,
         msg: &CrateMessage,
-    ) -> Result<reqwest::Request, Error> {
+    ) -> Result<super::ServiceResult, crate::Error> {
         let info = Self::from_url(url)?;
         let url = info.build_url()?;
 
@@ -142,23 +123,21 @@ impl super::Service<Error> for RocketChat {
         let mut body = Message::new(
             &info
                 .channel
-                .ok_or_else(|| Error::Url(String::from("channel")))?,
+                .ok_or_else(|| crate::Error::MissingField(String::from("channel")))?,
         );
         body.populate(msg);
 
         //build request
-        let builder = client.request(reqwest::Method::POST, url);
+        let builder = announce.client.request(reqwest::Method::POST, url);
         let req = builder
             .header("x-auth-token", info.token)
             .header("x-user-id", info.user)
             .header("content-type", "applicatioin/json")
             .json(&body)
             .build()?;
-
-        log::trace!("{:?}", body);
         log::trace!("{:?}", req);
 
-        Ok(req)
+        Ok(super::ServiceResult::Reqwest(req))
     }
 }
 
