@@ -14,7 +14,7 @@ There are two ways to use this crate.
 You can choose to use a specific service like Rocket.Chat, create a Message from its module and use the announce method of Rocket.Chat.
 
 An example using Rocket.Chat
-```no_run
+```rust,no_run
 use announce::service::rocketchat;
 
 let client = reqwest::Client::new();
@@ -30,7 +30,7 @@ rocketchat::RocketChat::announce(&client, &url, &msg);
 ## Announcing the general way
 It's also possible to announce through more than one service at the same time. To do this create a Message from the crate level and use the announce method from lib.rs.
 
-```no_run
+```rust,no_run
 let urls = vec![
   url::Url::parse("rocketchats://user:token@secure_host.com/channel").unwrap(),
   url::Url::parse("rocketchat://user2:token2@unsecure_host.com/channel2").unwrap(),
