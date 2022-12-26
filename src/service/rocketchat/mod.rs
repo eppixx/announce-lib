@@ -145,8 +145,8 @@ impl RocketChat {
         Ok(reqwest::Url::parse(&url)?)
     }
 
-    // a helper function to query the channel id from its name
-    // api page: https://developer.rocket.chat/reference/api/rest-api/endpoints/core-endpoints/rooms-endpoints/info
+    /// a helper function to query the channel id from its name
+    /// api page: https://developer.rocket.chat/reference/api/rest-api/endpoints/core-endpoints/rooms-endpoints/info
     async fn get_channel_id(&self, client: &reqwest::Client) -> Result<String, crate::Error> {
         let channel = match &self.channel {
             Some(channel) => channel,
@@ -167,16 +167,30 @@ impl RocketChat {
         log::trace!("requesting room id from {}", channel);
 
         let response = client.execute(req).await?;
-        let text = response.text().await?;
-        let json: serde_json::Value = serde_json::from_str(&text)?;
+        let json = Self::check_for_error(response).await?;
         let room_id = &json["room"]["_id"];
-        //TODO handing json containing error
         match room_id {
             serde_json::Value::String(s) => Ok(String::from(s)),
             _ => Err(crate::Error::Generic(String::from(
                 "RocketChat returns no room id",
             ))),
         }
+    }
+
+    /// check a RocketChat response for errors
+    pub async fn check_for_error(
+        response: reqwest::Response,
+    ) -> Result<serde_json::Value, crate::Error> {
+        let text = response.text().await?;
+        let json: serde_json::Value = serde_json::from_str(&text)?;
+        if json.get("success") != Some(&serde_json::Value::Bool(true)) {
+            return Err(crate::Error::Generic(format!(
+                "Rocketchat api error: {:?}",
+                json.get("error")
+            )));
+        }
+
+        Ok(json)
     }
 }
 
