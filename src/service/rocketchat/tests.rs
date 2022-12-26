@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use super::super::message::Attachment;
-    use super::super::message::Message;
-    use super::super::RocketChat;
+    use super::super::message::{Attachment, Message};
+    use super::super::{RocketChat, Upload};
     use crate::message::Message as CrateMessage;
     use crate::service::Service;
 
@@ -59,5 +58,24 @@ mod tests {
         let status = RocketChat::announce(&client, &url, &msg).await;
         dbg!(&status);
         let _ = status.unwrap();
+    }
+
+    #[tokio::test]
+    async fn send_file() {
+        let client = reqwest::Client::new();
+
+        //build upload
+        let upload = Upload {
+            description: "a sample description",
+            message: "a sample message",
+            file_path: "./sample_uploads/License.md",
+            // file_path: "./sample_uploads/rustacean-flat-happy.svg",
+            // file_path: "./sample_uploads/rustacean-flat-happy.png",
+        };
+
+        let url = std::env::var("ROCKET_URL").expect("environment variable URL needs to be set");
+        let url = url::Url::parse(&url).expect("given URL is missformed or empty");
+        let response = RocketChat::upload(&client, &url, &upload).await;
+        println!("response: {:?}", response.unwrap().text().await);
     }
 }

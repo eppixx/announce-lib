@@ -6,10 +6,12 @@
 /// Message is to be used with this module
 pub mod message;
 mod tests;
+pub mod upload;
 
 use crate::message::Message as CrateMessage;
 use crate::service::Service;
 pub use message::Message;
+pub use upload::Upload;
 
 /// A implementation of messaging to a Rocket.Chat instance
 pub struct RocketChat {
@@ -98,6 +100,104 @@ impl RocketChat {
         log::trace!("request: {:?}", req);
 
         Ok(client.execute(req).await?)
+    }
+
+    pub async fn upload(
+        client: &reqwest::Client,
+        url: &reqwest::Url,
+        upload: &Upload<'_>,
+    ) -> Result<reqwest::Response, crate::Error> {
+        use reqwest::multipart;
+
+        let info = Self::from_url(url)?;
+        let url = info.build_url_upload(client).await?;
+
+        //open file to body stream
+        let file = tokio::fs::File::open(upload.file_path).await?;
+        let stream = tokio_util::codec::FramedRead::new(file, tokio_util::codec::BytesCodec::new());
+        let file_body = reqwest::Body::wrap_stream(stream);
+
+        //make form part of file
+        let file_path = String::from(upload.file_path);
+        let part = reqwest::multipart::Part::stream(file_body).file_name(file_path);
+        let mime = mime_guess::from_path(upload.file_path);
+        let file_part = match mime.first() {
+            None => part,
+            Some(mime) => part.mime_str(mime.essence_str())?,
+        };
+
+        //create the multipart form
+        let form = multipart::Form::new()
+            .text("msg", "secret")
+            .text("description", "secret description")
+            .part("file", file_part);
+
+        // build request
+        let builder = client.request(reqwest::Method::POST, url);
+        let req = builder
+            .header("x-auth-token", info.token)
+            .header("x-user-id", info.user)
+            .multipart(form)
+            .build()
+            .unwrap();
+        log::trace!("uploading request: {:?}", req);
+
+        Ok(client.execute(req).await?)
+    }
+
+    /// Returns the url that the upload will be send to
+    async fn build_url_upload(
+        &self,
+        client: &reqwest::Client,
+    ) -> Result<reqwest::Url, crate::Error> {
+        let room_id = self.get_channel_id(client).await?;
+        let url = match (self.https, self.port) {
+            (true, None) => format!("https://{}/api/v1/rooms.upload/{}", self.host, room_id),
+            (false, None) => format!("http://{}/api/v1/rooms.upload/{}", self.host, room_id),
+            (true, Some(p)) => format!(
+                "https://{}:{}/api/v1/rooms.upload/{}",
+                self.host, p, room_id
+            ),
+            (false, Some(p)) => {
+                format!("http://{}:{}/api/v1/rooms.upload/{}", self.host, p, room_id)
+            }
+        };
+
+        Ok(reqwest::Url::parse(&url)?)
+    }
+
+    // a helper function to query the channel id from its name
+    // api page: https://developer.rocket.chat/reference/api/rest-api/endpoints/core-endpoints/rooms-endpoints/info
+    async fn get_channel_id(&self, client: &reqwest::Client) -> Result<String, crate::Error> {
+        let channel = match &self.channel {
+            Some(channel) => channel,
+            None => return Err(crate::Error::MissingField(String::from("channel"))),
+        };
+        let url = match (self.https, self.port) {
+            (true, None) => format!("https://{}/api/v1/rooms.info", self.host),
+            (false, None) => format!("http://{}/api/v1/rooms.info", self.host),
+            (true, Some(p)) => format!("https://{}:{}/api/v1/rooms.info", self.host, p),
+            (false, Some(p)) => format!("http://{}:{}/api/v1/rooms.info", self.host, p),
+        };
+        let builder = client.request(reqwest::Method::GET, &url);
+        let req = builder
+            .header("x-auth-token", &self.token)
+            .header("x-user-id", &self.user)
+            .query(&[("roomName", channel)])
+            .build()?;
+        log::trace!("requesting room id from {}", channel);
+
+        let response = client.execute(req).await?;
+        let text = response.text().await?;
+        let json: serde_json::Value = serde_json::from_str(&text)?;
+        let room_id = &json["room"]["_id"];
+        //TODO handing json containing error
+        match room_id {
+            serde_json::Value::String(s) => Ok(String::from(s)),
+            _ => Err(crate::Error::Generic(format!(
+                "RocketChat returns no room id"
+            ))),
+        }
     }
 }
 

@@ -29,4 +29,16 @@ pub enum Error {
     /// A valid Url wich misses a needed field
     #[error("missing url field: {0}")]
     MissingField(String),
+
+    /// Error while converting to json
+    #[error("Cannot convert to json")]
+    SerdeJson(#[from] serde_json::Error),
+
+    /// Error with Io
+    #[error("Error handling io")]
+    Fs(#[from] std::io::Error),
+
+    /// A catch all error when no other is applicable
+    #[error("An Error occured: {0}")]
+    Generic(String),
 }
