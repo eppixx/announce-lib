@@ -66,8 +66,8 @@ mod tests {
 
         //build upload
         let upload = Upload {
-            description: "a sample description",
-            message: "a sample message",
+            description: None,
+            message: None,
             file_path: "./sample_uploads/License.md",
             // file_path: "./sample_uploads/rustacean-flat-happy.svg",
             // file_path: "./sample_uploads/rustacean-flat-happy.png",

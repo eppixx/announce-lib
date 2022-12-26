@@ -13,4 +13,9 @@ pub enum Message<'a> {
     Link(&'a str),
     /// link with a text
     LinkWithText(&'a str, &'a str),
+    // /// a file with a possible description
+    // FileWithDescription {
+    //     file: &'a str,
+    //     description: Option<&'a str>,
+    // },
 }

@@ -102,42 +102,21 @@ impl RocketChat {
         Ok(client.execute(req).await?)
     }
 
+    /// upload a file to a channel in RocketChat
     pub async fn upload(
         client: &reqwest::Client,
         url: &reqwest::Url,
         upload: &Upload<'_>,
     ) -> Result<reqwest::Response, crate::Error> {
-        use reqwest::multipart;
-
         let info = Self::from_url(url)?;
         let url = info.build_url_upload(client).await?;
-
-        //open file to body stream
-        let file = tokio::fs::File::open(upload.file_path).await?;
-        let stream = tokio_util::codec::FramedRead::new(file, tokio_util::codec::BytesCodec::new());
-        let file_body = reqwest::Body::wrap_stream(stream);
-
-        //make form part of file
-        let file_path = String::from(upload.file_path);
-        let part = reqwest::multipart::Part::stream(file_body).file_name(file_path);
-        let mime = mime_guess::from_path(upload.file_path);
-        let file_part = match mime.first() {
-            None => part,
-            Some(mime) => part.mime_str(mime.essence_str())?,
-        };
-
-        //create the multipart form
-        let form = multipart::Form::new()
-            .text("msg", "secret")
-            .text("description", "secret description")
-            .part("file", file_part);
 
         // build request
         let builder = client.request(reqwest::Method::POST, url);
         let req = builder
             .header("x-auth-token", info.token)
             .header("x-user-id", info.user)
-            .multipart(form)
+            .multipart(upload.build_form().await?)
             .build()
             .unwrap();
         log::trace!("uploading request: {:?}", req);
@@ -194,8 +173,8 @@ impl RocketChat {
         //TODO handing json containing error
         match room_id {
             serde_json::Value::String(s) => Ok(String::from(s)),
-            _ => Err(crate::Error::Generic(format!(
-                "RocketChat returns no room id"
+            _ => Err(crate::Error::Generic(String::from(
+                "RocketChat returns no room id",
             ))),
         }
     }
