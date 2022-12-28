@@ -169,21 +169,15 @@ impl<'a> Message<'a> {
     }
 
     /// converts a crate::Message to Message of this module
-    pub(super) fn populate(&mut self, msg: &'a CrateMessage) {
-        match msg {
-            CrateMessage::Text(s) => self.text = Some(s),
-            CrateMessage::Link(url) => {
-                let mut attachment = Attachment::default();
-                attachment.link(url);
-                self.attachments.push(attachment);
-            }
-            CrateMessage::LinkWithText(text, url) => {
-                let mut attachment = Attachment::<'_> {
-                    text: Some(text),
-                    ..Default::default()
-                };
-                attachment.link(url);
-                self.attachments.push(attachment);
+    pub(super) fn populate_from_crate_message(&mut self, msg: &'a CrateMessage) {
+        self.text = msg.text;
+        for hint in &msg.hints {
+            match hint {
+                crate::message::Hint::Link(link) => {
+                    let mut attachment = Attachment::default();
+                    attachment.link(link);
+                    self.attachments.push(attachment);
+                }
             }
         }
     }

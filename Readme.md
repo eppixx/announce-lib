@@ -36,7 +36,7 @@ let urls = vec![
   url::Url::parse("rocketchat://user2:token2@unsecure_host.com/channel2").unwrap(),
 ];
 let ann = announce::Announce::new().unwrap();
-let msg = announce::Message::Text("A sample Message to channel and channel2");
+let msg = announce::Message::new("A sample Message to channel and channel2");
 // or use another kind of enum Message
 
 ann.announce(urls, &msg);

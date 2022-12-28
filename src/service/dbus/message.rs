@@ -87,6 +87,28 @@ impl<'a> Message<'a> {
 
         self.hints.insert(hint, value);
     }
+
+    pub(super) fn from_crate_message(msg: &'a crate::Message) -> Self {
+        let mut result = Self::default();
+        if let Some(text) = msg.text {
+            result.body = text;
+        }
+        for hint in &msg.hints {
+            match hint {
+                crate::message::Hint::Link(link) => {
+                    // body text has priority over link hint
+                    if result.body.is_empty() {
+                        result.body = link;
+                    }
+                }
+            }
+        }
+        if msg.file_path.is_some() {
+            log::trace!("file upload is ignored for service dbus");
+        }
+
+        result
+    }
 }
 
 impl<'a> Default for Message<'a> {

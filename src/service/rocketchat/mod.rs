@@ -103,7 +103,7 @@ impl RocketChat {
     }
 
     /// upload a file to a channel in RocketChat
-    /// api page: https://developer.rocket.chat/reference/api/rest-api/endpoints/core-endpoints/rooms-endpoints/upload-file-to-a-room
+    /// api page: <https://developer.rocket.chat/reference/api/rest-api/endpoints/core-endpoints/rooms-endpoints/upload-file-to-a-room>
     pub async fn upload(
         client: &reqwest::Client,
         url: &reqwest::Url,
@@ -219,7 +219,7 @@ impl super::Service for RocketChat {
                 .channel
                 .ok_or_else(|| crate::Error::MissingField(String::from("channel")))?,
         );
-        body.populate(msg);
+        body.populate_from_crate_message(msg);
 
         //build request
         let builder = announce.client.request(reqwest::Method::POST, url);

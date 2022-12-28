@@ -106,7 +106,7 @@ impl super::Service for Discord {
     ) -> Result<super::ServiceResult, crate::Error> {
         let info = Self::from_url(url)?;
         let url = info.build_url()?;
-        let msg = Message::from_message(msg);
+        let msg = Message::from_crate_message(msg);
 
         //build request
         let builder = announce.client.request(reqwest::Method::POST, url);

@@ -57,24 +57,20 @@ pub struct Message<'a> {
 
 impl<'a> Message<'a> {
     /// creates a Message from a [crate::Message]
-    pub fn from_message(msg: &'a CrateMessage) -> Message<'a> {
-        let mut result = Message::default();
-        match msg {
-            CrateMessage::Text(s) => result.content = Some(s),
-            CrateMessage::Link(url) => {
-                let embed = Embed::<'_> {
-                    url: Some(url),
-                    ..Default::default()
-                };
-                result.embeds.push(embed);
-            }
-            CrateMessage::LinkWithText(text, url) => {
-                let embed = Embed::<'_> {
-                    title: Some(text),
-                    url: Some(url),
-                    ..Default::default()
-                };
-                result.embeds.push(embed);
+    pub fn from_crate_message(msg: &'a CrateMessage) -> Message<'a> {
+        let mut result = Message {
+            content: msg.text,
+            ..Default::default()
+        };
+        for hint in &msg.hints {
+            match hint {
+                crate::message::Hint::Link(link) => {
+                    let embed = Embed::<'_> {
+                        url: Some(link),
+                        ..Default::default()
+                    };
+                    result.embeds.push(embed);
+                }
             }
         }
 

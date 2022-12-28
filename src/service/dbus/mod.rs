@@ -109,12 +109,8 @@ impl super::Service for Dbus {
     ) -> Result<super::ServiceResult, crate::Error> {
         let info = Self::from_url(url)?;
         let proxy = NotificationsProxyBlocking::new(&announce.dbus_con)?;
+        let mut message = Message::from_crate_message(msg);
 
-        let mut message = Message::default();
-        match msg {
-            crate::Message::Text(s) => message.body = s,
-            _ => todo!(),
-        };
         let app_name = info
             .app_name
             .unwrap_or_else(|| String::from(message.app_name));
@@ -159,7 +155,7 @@ mod tests {
     #[tokio::test]
     async fn test_dbus_msg() {
         let announce = crate::Announce::new().unwrap();
-        let msg = crate::Message::Text("ein test");
+        let msg = crate::Message::new("ein test");
         let url = "dbus://Announce@dialog_information:1";
         let url = reqwest::Url::parse(&url).expect("faulty url");
 

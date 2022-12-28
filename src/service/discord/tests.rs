@@ -10,7 +10,7 @@ mod tests {
         let announce = crate::Announce::new().unwrap();
 
         //set message
-        let msg = CrateMessage::Text("dies ist ein test");
+        let msg = CrateMessage::new("dies ist ein test");
         //or use any other type of CrateMessage
 
         //get url form evironment
