@@ -19,6 +19,7 @@ pub enum ServiceResult {
 }
 
 /// A trait implemented for all services
+#[async_trait::async_trait]
 pub trait Service {
     /// Returns a Vec of supported schemas
     fn schema() -> Vec<&'static str>;
@@ -27,7 +28,7 @@ pub trait Service {
     // either use the crate::annoucne(..) method
     // or the announce method of a specific service
     #[doc(hidden)]
-    fn build_request(
+    async fn build_request(
         announce: &crate::Announce,
         target: &reqwest::Url,
         msg: &Message,
@@ -40,23 +41,23 @@ pub trait Service {
 }
 
 /// Tests url with all services and returns a request if it does
-pub fn decide_service(
+pub async fn decide_service(
     announce: &crate::Announce,
     url: &reqwest::Url,
-    msg: &Message,
+    msg: &Message<'_>,
 ) -> Result<ServiceResult, crate::Error> {
     //cascade of services
     #[cfg(feature = "rocketchat")]
     if rocketchat::RocketChat::match_scheme(url) {
-        return rocketchat::RocketChat::build_request(announce, url, msg);
+        return rocketchat::RocketChat::build_request(announce, url, msg).await;
     }
     #[cfg(feature = "dbus")]
     if dbus::Dbus::match_scheme(url) {
-        return dbus::Dbus::build_request(announce, url, msg);
+        return dbus::Dbus::build_request(announce, url, msg).await;
     }
     #[cfg(feature = "discord")]
     if discord::Discord::match_scheme(url) {
-        return discord::Discord::build_request(announce, url, msg);
+        return discord::Discord::build_request(announce, url, msg).await;
     }
 
     Err(crate::Error::NoMatchingSchema)

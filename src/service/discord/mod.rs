@@ -89,6 +89,7 @@ impl Discord {
     }
 }
 
+#[async_trait::async_trait]
 impl super::Service for Discord {
     fn schema() -> Vec<&'static str> {
         vec!["discord"]
@@ -99,7 +100,7 @@ impl super::Service for Discord {
     /// * discord://WEBHOOK_ID/WEBHOOK_TOKEN
     /// Note: The url copied when creating a new webhook contains the id and the token
     #[doc(hidden)]
-    fn build_request(
+    async fn build_request(
         announce: &crate::Announce,
         url: &reqwest::Url,
         msg: &CrateMessage,

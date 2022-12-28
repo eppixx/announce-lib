@@ -195,6 +195,7 @@ impl RocketChat {
     }
 }
 
+#[async_trait::async_trait]
 impl super::Service for RocketChat {
     fn schema() -> Vec<&'static str> {
         vec!["rocketchat", "rocketchats"]
@@ -205,7 +206,7 @@ impl super::Service for RocketChat {
     /// * rocketchat://USER:TOKEN@HOSTNAME/CHANNEL
     /// * rocketchats://USER:TOKEN@HOSTNAME/CHANNEL
     #[doc(hidden)]
-    fn build_request(
+    async fn build_request(
         announce: &crate::Announce,
         url: &reqwest::Url,
         msg: &CrateMessage,
@@ -213,25 +214,44 @@ impl super::Service for RocketChat {
         let info = Self::from_url(url)?;
         let url = info.build_url()?;
 
-        //build body from msg
-        let mut body = Message::new(
-            &info
-                .channel
-                .ok_or_else(|| crate::Error::MissingField(String::from("channel")))?,
-        );
-        body.populate_from_crate_message(msg);
+        //build body or upload from msg
+        let channel = match info.channel {
+            Some(ref channel) => channel,
+            None => return Err(crate::Error::MissingField(String::from("channel"))),
+        };
+        let (body, upload) = message::from_msg(msg, channel);
 
         //build request
-        let builder = announce.client.request(reqwest::Method::POST, url);
-        let req = builder
-            .header("x-auth-token", info.token)
-            .header("x-user-id", info.user)
-            .header("content-type", "applicatioin/json")
-            .json(&body)
-            .build()?;
-        log::trace!("{:?}", req);
+        match (body, upload) {
+            (Some(body), _) => {
+                let builder = announce.client.request(reqwest::Method::POST, url);
+                let req = builder
+                    .header("x-auth-token", info.token)
+                    .header("x-user-id", info.user)
+                    .header("content-type", "applicatioin/json")
+                    .json(&body)
+                    .build()?;
+                log::trace!("{:?}", req);
 
-        Ok(super::ServiceResult::Reqwest(req))
+                Ok(super::ServiceResult::Reqwest(req))
+            }
+            (_, Some(upload)) => {
+                let url = info.build_url_upload(&announce.client).await?;
+
+                // build request
+                let builder = announce.client.request(reqwest::Method::POST, url);
+                let req = builder
+                    .header("x-auth-token", info.token)
+                    .header("x-user-id", info.user)
+                    .multipart(upload.build_form().await?)
+                    .build()
+                    .unwrap();
+                log::trace!("uploading request: {:?}", req);
+
+                Ok(super::ServiceResult::Reqwest(req))
+            }
+            (None, None) => unreachable!(),
+        }
     }
 }
 

@@ -101,6 +101,7 @@ impl<'a> Message<'a> {
                         result.body = link;
                     }
                 }
+                crate::message::Hint::Description(_) => {}
             }
         }
         if msg.file_path.is_some() {

@@ -31,4 +31,6 @@ impl<'a> Message<'a> {
 pub enum Hint<'a> {
     /// A Link
     Link(&'a str),
+    /// A Description
+    Description(&'a str),
 }

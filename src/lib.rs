@@ -67,7 +67,7 @@ impl Announce {
         //build requests for each given target
         let mut results = vec![];
         for url in urls {
-            results.push(service::decide_service(self, &url, msg)?);
+            results.push(service::decide_service(self, &url, msg).await?);
         }
 
         ReturnType::convert(self, results).await

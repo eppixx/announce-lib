@@ -93,6 +93,7 @@ impl Dbus {
     }
 }
 
+#[async_trait::async_trait]
 impl super::Service for Dbus {
     fn schema() -> Vec<&'static str> {
         vec!["dbus"]
@@ -102,7 +103,7 @@ impl super::Service for Dbus {
     /// Allowed url's are:
     /// * dbus://{APP_NAME@}{ICON_NAME}{:TIMEOUT}
     #[doc(hidden)]
-    fn build_request(
+    async fn build_request(
         announce: &crate::Announce,
         url: &reqwest::Url,
         msg: &crate::Message,

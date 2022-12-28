@@ -63,13 +63,29 @@ impl<'a> Message<'a> {
             ..Default::default()
         };
         for hint in &msg.hints {
+            // assume only up to 1 embed exists
             match hint {
                 crate::message::Hint::Link(link) => {
-                    let embed = Embed::<'_> {
-                        url: Some(link),
-                        ..Default::default()
-                    };
-                    result.embeds.push(embed);
+                    if let Some(embed) = result.embeds.get_mut(0) {
+                        embed.url = Some(link);
+                    } else {
+                        let embed = Embed::<'_> {
+                            url: Some(link),
+                            ..Default::default()
+                        };
+                        result.embeds.push(embed);
+                    }
+                }
+                crate::message::Hint::Description(des) => {
+                    if let Some(embed) = result.embeds.get_mut(0) {
+                        embed.description = Some(des);
+                    } else {
+                        let embed = Embed::<'_> {
+                            description: Some(des),
+                            ..Default::default()
+                        };
+                        result.embeds.push(embed);
+                    }
                 }
             }
         }
@@ -91,7 +107,7 @@ pub struct Embed<'a> {
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub typ: Option<Typ>,
 
-    /// desciption of embed
+    /// description of embed
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<&'a str>,
 

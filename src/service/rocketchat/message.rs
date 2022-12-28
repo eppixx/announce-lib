@@ -167,18 +167,55 @@ impl<'a> Message<'a> {
         clone.channel = channel;
         clone
     }
+}
 
-    /// converts a crate::Message to Message of this module
-    pub(super) fn populate_from_crate_message(&mut self, msg: &'a CrateMessage) {
-        self.text = msg.text;
-        for hint in &msg.hints {
-            match hint {
-                crate::message::Hint::Link(link) => {
-                    let mut attachment = Attachment::default();
-                    attachment.link(link);
-                    self.attachments.push(attachment);
+/// takes a [crate::Message] and based on the file_path member creates either a [Message]
+/// or a [super::upload::Upload]
+pub(super) fn from_msg<'a>(
+    msg: &'a CrateMessage,
+    channel: &'a str,
+) -> (Option<Message<'a>>, Option<super::upload::Upload<'a>>) {
+    match msg.file_path {
+        Some(path) => {
+            let mut upload = super::upload::Upload::new(path);
+            upload.message = msg.text;
+            for hint in &msg.hints {
+                match hint {
+                    crate::message::Hint::Link(_) => {}
+                    crate::message::Hint::Description(des) => upload.description = Some(des),
                 }
             }
+            (None, Some(super::upload::Upload::new(path)))
+        }
+        None => {
+            let mut message = Message::new(channel);
+            message.text = msg.text;
+            for hint in &msg.hints {
+                // assume only up to 1 embed exists
+                match hint {
+                    crate::message::Hint::Link(url) => {
+                        if let Some(attach) = message.attachments.get_mut(0) {
+                            attach.link(url);
+                        } else {
+                            let mut attach = Attachment::default();
+                            attach.link(url);
+                            message.attachments.push(attach);
+                        }
+                    }
+                    crate::message::Hint::Description(des) => {
+                        if let Some(attach) = message.attachments.get_mut(0) {
+                            attach.text = Some(des);
+                        } else {
+                            let attach = Attachment {
+                                text: Some(des),
+                                ..Default::default()
+                            };
+                            message.attachments.push(attach);
+                        }
+                    }
+                }
+            }
+            (Some(message), None)
         }
     }
 }
