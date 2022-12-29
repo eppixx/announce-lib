@@ -206,13 +206,12 @@ impl super::Service for RocketChat {
     /// * rocketchat://USER:TOKEN@HOSTNAME/CHANNEL
     /// * rocketchats://USER:TOKEN@HOSTNAME/CHANNEL
     #[doc(hidden)]
-    async fn build_request(
+    async fn notify(
         announce: &crate::Announce,
         url: &reqwest::Url,
         msg: &CrateMessage,
     ) -> Result<crate::ReturnType, crate::Error> {
         let info = Self::from_url(url)?;
-        let url = info.build_url()?;
 
         //build body or upload from msg
         let channel = match info.channel {
@@ -222,36 +221,11 @@ impl super::Service for RocketChat {
         let (body, upload) = message::from_msg(msg, channel);
 
         //build request
-        let request = match (body, upload) {
-            (Some(body), _) => {
-                let builder = announce.client.request(reqwest::Method::POST, url);
-                let req = builder
-                    .header("x-auth-token", info.token)
-                    .header("x-user-id", info.user)
-                    .header("content-type", "applicatioin/json")
-                    .json(&body)
-                    .build()?;
-                log::trace!("message request: {:?}", req);
-                req
-            }
-            (_, Some(upload)) => {
-                let url = info.build_url_upload(&announce.client).await?;
-
-                // build request
-                let builder = announce.client.request(reqwest::Method::POST, url);
-                let req = builder
-                    .header("x-auth-token", info.token)
-                    .header("x-user-id", info.user)
-                    .multipart(upload.build_form().await?)
-                    .build()
-                    .unwrap();
-                log::trace!("uploading request: {:?}", req);
-                req
-            }
+        let response = match (body, upload) {
+            (Some(body), _) => RocketChat::announce(&announce.client, url, &body).await?,
+            (_, Some(upload)) => RocketChat::upload(&announce.client, url, &upload).await?,
             (None, None) => unreachable!(),
         };
-
-        let response = announce.client.execute(request).await?;
         Ok(crate::ReturnType::Reqwest(response))
     }
 }

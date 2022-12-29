@@ -100,26 +100,14 @@ impl super::Service for Discord {
     /// * discord://WEBHOOK_ID/WEBHOOK_TOKEN
     /// Note: The url copied when creating a new webhook contains the id and the token
     #[doc(hidden)]
-    async fn build_request(
+    async fn notify(
         announce: &crate::Announce,
         url: &reqwest::Url,
         msg: &CrateMessage,
     ) -> Result<crate::ReturnType, crate::Error> {
-        let info = Self::from_url(url)?;
-        let url = info.build_url()?;
         let msg = Message::from_crate_message(msg);
+        let response = Discord::announce(&announce.client, url, &msg).await?;
 
-        //build request
-        let builder = announce.client.request(reqwest::Method::POST, url);
-        let req = builder
-            .header("Accept", "application/json")
-            .header("Content-Type", "application/json")
-            .json(&msg)
-            .build()
-            .unwrap();
-        log::trace!("{:?}", req);
-
-        let response = announce.client.execute(req).await?;
         Ok(crate::ReturnType::Reqwest(response))
     }
 }

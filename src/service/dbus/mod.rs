@@ -103,7 +103,7 @@ impl super::Service for Dbus {
     /// Allowed url's are:
     /// * dbus://{APP_NAME@}{ICON_NAME}{:TIMEOUT}
     #[doc(hidden)]
-    async fn build_request(
+    async fn notify(
         announce: &crate::Announce,
         url: &reqwest::Url,
         msg: &crate::Message,
@@ -157,12 +157,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_dbus_msg() {
-        let announce = crate::Announce::new().unwrap();
+        let announce = crate::Announce::new().await.unwrap();
         let msg = crate::Message::new("ein test");
         let url = "dbus://Announce@dialog_information:1";
         let url = reqwest::Url::parse(&url).expect("faulty url");
 
-        let response = super::Dbus::build_request(&announce, &url, &msg);
+        let response = super::Dbus::notify(&announce, &url, &msg).await;
         let _ = response.unwrap();
     }
 }

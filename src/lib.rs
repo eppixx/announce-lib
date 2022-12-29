@@ -10,6 +10,7 @@ pub use message::Message;
 
 // TODO merge with ServiceResult when async in traits is allowed
 /// Result that contains all results from every possible service
+#[derive(Debug)]
 pub enum ReturnType {
     /// A Reqwest result
     Reqwest(reqwest::Response),

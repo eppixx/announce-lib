@@ -7,7 +7,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_discord_crate_message() {
-        let announce = crate::Announce::new().unwrap();
+        let announce = crate::Announce::new().await.unwrap();
 
         //set message
         let msg = CrateMessage::new("dies ist ein test");
@@ -18,13 +18,7 @@ mod tests {
         assert_ne!(url, "", "environment variable URL is empty");
         let url = url::Url::parse(&url).expect("given URL is in the wrong format");
 
-        let req = Discord::build_request(&announce, &url, &msg);
-        dbg!(&req);
-        let req = match req.unwrap() {
-            crate::service::ServiceResult::Reqwest(req) => req,
-            _ => panic!("expected a reqwest"),
-        };
-        let response = announce.client.execute(req).await.unwrap();
+        let response = Discord::notify(&announce, &url, &msg).await.unwrap();
         dbg!(&response);
     }
 

@@ -7,7 +7,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_msg() {
-        let announce = crate::Announce::new().unwrap();
+        let announce = crate::Announce::new().await.unwrap();
 
         //set message
         let msg = CrateMessage::new("dies ist ein test");
@@ -18,12 +18,7 @@ mod tests {
         assert_ne!(url, "", "environment variable URL is empty");
         let url = url::Url::parse(&url).expect("given URL is in the wrong format");
 
-        let req = RocketChat::build_request(&announce, &url, &msg);
-        let req = match req.unwrap() {
-            crate::service::ServiceResult::Reqwest(req) => req,
-            _ => panic!("expected a reqwest"),
-        };
-        let response = announce.client.execute(req).await.unwrap();
+        let response = RocketChat::notify(&announce, &url, &msg).await.unwrap();
         dbg!(&response);
     }
 

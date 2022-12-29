@@ -28,7 +28,7 @@ pub trait Service {
     // either use the crate::announce(..) method
     // or the announce method of a specific service
     #[doc(hidden)]
-    async fn build_request(
+    async fn notify(
         announce: &crate::Announce,
         target: &reqwest::Url,
         msg: &Message,
@@ -49,15 +49,15 @@ pub async fn decide_service(
     //cascade of services
     #[cfg(feature = "rocketchat")]
     if rocketchat::RocketChat::match_scheme(url) {
-        return rocketchat::RocketChat::build_request(announce, url, msg).await;
+        return rocketchat::RocketChat::notify(announce, url, msg).await;
     }
     #[cfg(feature = "dbus")]
     if dbus::Dbus::match_scheme(url) {
-        return dbus::Dbus::build_request(announce, url, msg).await;
+        return dbus::Dbus::notify(announce, url, msg).await;
     }
     #[cfg(feature = "discord")]
     if discord::Discord::match_scheme(url) {
-        return discord::Discord::build_request(announce, url, msg).await;
+        return discord::Discord::notify(announce, url, msg).await;
     }
 
     Err(crate::Error::NoMatchingSchema)
