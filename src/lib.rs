@@ -55,7 +55,7 @@ impl Announce {
 
     /// Sends the same messages to multiple services.
     ///
-    /// If a Error is encountered while sending a message the following urls that follow
+    /// If an error is encountered while sending a message the following urls that follow
     /// will be canceled.
     pub async fn announce(
         &self,
@@ -68,28 +68,18 @@ impl Announce {
             results.push(service::decide_service(self, &url, msg).await?);
         }
 
-        ReturnType::convert(self, results).await
+        Ok(results)
     }
-}
 
-impl ReturnType {
-    /// Converts a [service::Result] to [Self]. Also sends the requests and changes returns
-    /// its results
-    async fn convert(
-        announce: &crate::Announce,
-        results: Vec<service::ServiceResult>,
-    ) -> Result<Vec<Self>, Error> {
-        let mut collection = vec![];
-        for result in results {
-            use service::ServiceResult;
-            collection.push(match result {
-                ServiceResult::Reqwest(req) => {
-                    ReturnType::Reqwest(announce.client.execute(req).await?)
-                }
-                ServiceResult::Dbus(result) => ReturnType::Dbus(result),
-            })
+    /// Sends the same message to multiple services but ignores errors.
+    ///
+    /// If a services produces an error it will be logged and ignored.
+    pub async fn announce_ignore_errors(&self, urls: Vec<reqwest::Url>, msg: &Message<'_>) {
+        for url in urls {
+            match service::decide_service(self, &url, msg).await {
+                Ok(_) => {}
+                Err(e) => log::warn!("encountered an error in {}: {}", url, e),
+            }
         }
-
-        Ok(collection)
     }
 }

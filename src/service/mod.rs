@@ -9,14 +9,14 @@ pub mod discord;
 #[cfg(feature = "rocketchat")]
 pub mod rocketchat;
 
-/// Type for catching results of services
-#[derive(Debug)]
-pub enum ServiceResult {
-    /// A Request that still needs to be executed
-    Reqwest(reqwest::Request),
-    /// A Dbus result
-    Dbus(u32),
-}
+// /// Type for catching results of services
+// #[derive(Debug)]
+// pub enum ServiceResult {
+//     /// A Request that still needs to be executed
+//     Reqwest(reqwest::Request),
+//     /// A Dbus result
+//     Dbus(u32),
+// }
 
 /// A trait implemented for all services
 #[async_trait::async_trait]
@@ -25,14 +25,14 @@ pub trait Service {
     fn schema() -> Vec<&'static str>;
 
     // shouldn't be used by the user
-    // either use the crate::annoucne(..) method
+    // either use the crate::announce(..) method
     // or the announce method of a specific service
     #[doc(hidden)]
     async fn build_request(
         announce: &crate::Announce,
         target: &reqwest::Url,
         msg: &Message,
-    ) -> Result<ServiceResult, crate::Error>;
+    ) -> Result<crate::ReturnType, crate::Error>;
 
     /// Returns true if a given url matches with a schema of a given service
     fn match_scheme(url: &reqwest::Url) -> bool {
@@ -45,7 +45,7 @@ pub async fn decide_service(
     announce: &crate::Announce,
     url: &reqwest::Url,
     msg: &Message<'_>,
-) -> Result<ServiceResult, crate::Error> {
+) -> Result<crate::ReturnType, crate::Error> {
     //cascade of services
     #[cfg(feature = "rocketchat")]
     if rocketchat::RocketChat::match_scheme(url) {

@@ -104,7 +104,7 @@ impl super::Service for Discord {
         announce: &crate::Announce,
         url: &reqwest::Url,
         msg: &CrateMessage,
-    ) -> Result<super::ServiceResult, crate::Error> {
+    ) -> Result<crate::ReturnType, crate::Error> {
         let info = Self::from_url(url)?;
         let url = info.build_url()?;
         let msg = Message::from_crate_message(msg);
@@ -119,6 +119,7 @@ impl super::Service for Discord {
             .unwrap();
         log::trace!("{:?}", req);
 
-        Ok(super::ServiceResult::Reqwest(req))
+        let response = announce.client.execute(req).await?;
+        Ok(crate::ReturnType::Reqwest(response))
     }
 }

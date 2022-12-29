@@ -107,7 +107,7 @@ impl super::Service for Dbus {
         announce: &crate::Announce,
         url: &reqwest::Url,
         msg: &crate::Message,
-    ) -> Result<super::ServiceResult, crate::Error> {
+    ) -> Result<crate::ReturnType, crate::Error> {
         let info = Self::from_url(url)?;
         let proxy = NotificationsProxy::new(&announce.dbus_con).await?;
         let mut message = Message::from_crate_message(msg);
@@ -136,7 +136,7 @@ impl super::Service for Dbus {
             .await?;
         log::trace!("{:?}", reply);
 
-        Ok(super::ServiceResult::Dbus(reply))
+        Ok(crate::ReturnType::Dbus(reply))
     }
 }
 
