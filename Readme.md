@@ -42,7 +42,7 @@ async fn main() {
     ];
     let ann = announce::Announce::new().await.unwrap();
     let msg = announce::Message::new("A sample Message to channel and channel2");
-    // or use another kind of enum Message
+    // modify Message to your liking
 
     ann.announce(urls, &msg);
 }
