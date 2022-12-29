@@ -24,14 +24,12 @@ pub struct Announce {
 
     #[cfg(feature = "dbus")]
     /// connection for dbus
-    pub dbus_con: zbus::blocking::Connection,
-    //TODO replace with the following when async in traits is allowed
-    // dbus_con: zbus::Connection;
+    dbus_con: zbus::Connection,
 }
 
 impl Announce {
     /// Creates a Announce object for announcing
-    pub fn new() -> Result<Self, Error> {
+    pub async fn new() -> Result<Self, Error> {
         //build client
         let mut agent = reqwest::header::HeaderMap::new();
         agent.insert(
@@ -46,7 +44,7 @@ impl Announce {
             .build()?;
 
         #[cfg(feature = "dbus")]
-        let dbus_con = zbus::blocking::Connection::session()?;
+        let dbus_con = zbus::Connection::session().await?;
 
         Ok(Self {
             client,

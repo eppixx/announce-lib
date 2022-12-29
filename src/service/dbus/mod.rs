@@ -109,7 +109,7 @@ impl super::Service for Dbus {
         msg: &crate::Message,
     ) -> Result<super::ServiceResult, crate::Error> {
         let info = Self::from_url(url)?;
-        let proxy = NotificationsProxyBlocking::new(&announce.dbus_con)?;
+        let proxy = NotificationsProxy::new(&announce.dbus_con).await?;
         let mut message = Message::from_crate_message(msg);
 
         let app_name = info
@@ -122,16 +122,18 @@ impl super::Service for Dbus {
         message.app_icon = &app_icon;
         message.expire_timeout = info.expire_timeout.unwrap_or(message.expire_timeout);
 
-        let reply = proxy.notify(
-            message.app_name,
-            message.replaces_id,
-            message.app_icon,
-            message.summary,
-            message.body,
-            message.actions,
-            message.hints,
-            message.expire_timeout,
-        )?;
+        let reply = proxy
+            .notify(
+                message.app_name,
+                message.replaces_id,
+                message.app_icon,
+                message.summary,
+                message.body,
+                message.actions,
+                message.hints,
+                message.expire_timeout,
+            )
+            .await?;
         log::trace!("{:?}", reply);
 
         Ok(super::ServiceResult::Dbus(reply))
