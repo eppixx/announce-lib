@@ -88,10 +88,11 @@ impl<'a> Message<'a> {
         self.hints.insert(hint, value);
     }
 
-    pub(super) fn from_crate_message(msg: &'a crate::Message) -> Self {
+    pub(super) fn from_crate_message(msg: &'a crate::Message) -> Result<Self, crate::Error> {
         let mut result = Self::default();
-        if let Some(text) = msg.text {
-            result.body = text;
+        match msg.text {
+            Some(text) => result.body = text,
+            None => return Err(crate::Error::Generic(String::from("No Message given"))),
         }
         for hint in &msg.hints {
             match hint {
@@ -108,7 +109,7 @@ impl<'a> Message<'a> {
             log::trace!("file upload is ignored for service dbus");
         }
 
-        result
+        Ok(result)
     }
 }
 
