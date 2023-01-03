@@ -6,6 +6,7 @@ pub mod message;
 pub mod service;
 
 pub use error::Error;
+pub use message::Hint;
 pub use message::Message;
 
 // TODO merge with ServiceResult when async in traits is allowed

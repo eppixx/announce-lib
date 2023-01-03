@@ -110,7 +110,7 @@ impl super::Service for Dbus {
     ) -> Result<crate::ReturnType, crate::Error> {
         let info = Self::from_url(url)?;
         let proxy = NotificationsProxy::new(&announce.dbus_con).await?;
-        let mut message = Message::from_crate_message(msg);
+        let mut message = Message::from_crate_message(msg)?;
 
         let app_name = info
             .app_name
